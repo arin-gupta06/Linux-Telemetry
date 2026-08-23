@@ -1,0 +1,326 @@
+{
+  "features": [
+    {
+      "name": "Core Project Setup and Monorepo Foundation",
+      "commits": [
+        "f1d3875d346fb1397504acf2cc2beb2efbbda578",
+        "ebd4213991fbd231359544267cc98c067bf818ac"
+      ],
+      "summary": "This foundational feature established the monorepo structure using pnpm and Turborepo. It set up initial applications (API, Worker, Scheduler, Websocket placeholders) and core packages for configuration, database interaction, logging, queueing, state management, and shared types. It includes basic infrastructure like Docker Compose configurations for PostgreSQL and Redis, along with common development tooling setup. The configuration package was later enhanced with robust validation for environment variables like port numbers and introduced `NODE_ENV` for environment-specific settings.",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "A pnpm-based monorepo was established with distinct `apps` and `packages` directories. Key packages like `@algofight/config`, `@algofight/database`, `@algofight/logger`, `@algofight/queue`, `@algofight/state-machine`, and `@algofight/types` were created to enforce modularity and separation of concerns. Docker Compose files for PostgreSQL and Redis were introduced to standardize the development environment. Initial API and Worker applications demonstrated a basic submission processing flow. The `@algofight/config` schema was updated with `NODE_ENV` enum validation and `z.coerce.number().int().min(1).max(65535)` for `PORT` and `REDIS_PORT`.",
+      "backendModulesAffected": [
+        "root",
+        "apps/api",
+        "apps/worker",
+        "apps/scheduler",
+        "apps/websocket",
+        "packages/application",
+        "packages/config",
+        "packages/database",
+        "packages/logger",
+        "packages/queue",
+        "packages/state-machine",
+        "packages/types"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "README.md",
+        "development docs/CHANGELOG.md",
+        "development docs/Architectural diagram.png",
+        "development docs/Configuration.md"
+      ],
+      "apiChanges": [],
+      "databaseChanges": [
+        "`SubmissionEntity` expanded to include `userId`, `problemId`, `stderr`, `exitCode`, and use `SubmissionStatus` enum.",
+        "Initial database migration `20260528092414_init_submission` created `Submission` table."
+      ]
+    },
+    {
+      "name": "Robust Error Handling Framework",
+      "commits": [
+        "f90e373c85d9023119598969edbeaa828517ffff",
+        "84baf7b006fc68d951130d68b54475820fc4800b",
+        "4ecd343609427d5fea4d4e80ab15874975ea61b5",
+        "579d73825fb5297af60f73d6120d6dee73944e04",
+        "5fb8a4230a19cb36f539ac32b063cbad6d032aca",
+        "524460c3689d7a28556b102f4125e037a410d336"
+      ],
+      "summary": "A comprehensive error handling framework was introduced to standardize error types, classification, and response generation across the backend. It defines a hierarchy of custom error classes with specific error codes, layers, and HTTP status codes, and integrates a Fastify plugin to catch and format these errors for API responses.",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "A new `@algofight/error_handling` package was created to centralize error definitions. It introduces an abstract `AppError` base class, extended by `DomainError`, `ApplicationError`, `InfrastructureError`, and `ValidationError`. `ErrorCode` and `ErrorLayer` enums provide clear classification. An `ErrorResponseFactory` ensures consistent API error payloads. The API layer now uses a Fastify error handler plugin to automatically convert these structured errors into standardized HTTP responses, improving consistency and developer experience. Specific error types like `SubmissionNotFoundError` and `ProblemNotFoundError` were added.",
+      "backendModulesAffected": [
+        "packages/error_handling",
+        "apps/api",
+        "packages/application",
+        "packages/database"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "README.md",
+        "development docs/CHANGELOG.md",
+        "development docs/Error Handling.md"
+      ],
+      "apiChanges": [
+        "API endpoints now return structured error responses (code, layer, message, timestamp) for application-defined errors."
+      ],
+      "databaseChanges": []
+    },
+    {
+      "name": "Enhanced Logging and Observability",
+      "commits": [
+        "c2d8223ea7419d1f4adf2f5799447f8ad585c75c",
+        "ebd4213991fbd231359544267cc98c067bf818ac"
+      ],
+      "summary": "This feature integrated a structured logging solution across all major backend applications. It provides configurable log levels, human-readable output in development, and JSON output in production. It also introduces standardized logging contexts and metadata, along with graceful shutdown procedures for services.",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "The `@algofight/logger` package was enhanced with `LOG_CONTEXT` for categorization and `LogMetadata` for structured data. Logger configuration became more robust, allowing `LOG_LEVEL` environment variables and conditional `pino-pretty` for development. Logging was deeply integrated into API, Worker, and Scheduler applications. Graceful shutdown mechanisms with logging were added to API and Worker/Scheduler processes, ensuring clean termination. The `createLogger` factory now utilizes typed `LOG_CONTEXT`.",
+      "backendModulesAffected": [
+        "packages/logger",
+        "packages/config",
+        "apps/api",
+        "apps/worker",
+        "apps/scheduler",
+        "packages/application",
+        "packages/queue"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "development docs/CHANGELOG.md",
+        "development docs/Observability.md",
+        "development docs/Configuration.md"
+      ],
+      "apiChanges": [],
+      "databaseChanges": []
+    },
+    {
+      "name": "Submission Management and Processing Flow",
+      "commits": [
+        "f1d3875d346fb1397504acf2cc2beb2efbbda578",
+        "30b0705d40266abf22be6287ba8827d8c207a82f",
+        "f90e373c85d9023119598969edbeaa828517ffff",
+        "a9f2ecf1ff5f3d3151b320629ea35e2d2ba3f15b",
+        "5fb8a4230a19cb36f539ac32b063cbad6d032aca",
+        "c2d8223ea7419d1f4adf2f5799447f8ad585c75c",
+        "cf9ac9602f674e176a478429e4efbbc602f392bc"
+      ],
+      "summary": "This feature refined the core submission processing pipeline, including API endpoints for submission, repository interactions, and the initial execution service. It established contracts for code execution and integrated Zod for request validation. API routes were refactored into dedicated modules for better organization. The API now also updates the submission status to `QUEUED` immediately after enqueuing the job, providing more accurate status tracking.",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "The API's `/submit` endpoint now uses a `SubmissionInput` Zod schema for request validation. The `SubmissionRepository` contract was expanded to include `createSubmission` with detailed input and `getSubmissionById`. A `toSubmissionEntity` mapper was introduced to convert Prisma models to domain entities. The `ExecutionService` orchestrates fetching submissions, updating their status to `PROCESSING`, and delegating to a `CodeExecutor`. The `CodeExecutor` contract was updated to accept a comprehensive `ExecutionPayload`. The `MockExecutor` was enhanced to return more realistic `SubmissionResult`s. API routes (`/` for health, `/submit`, `/submissions`) are refactored into `health.route.ts` and `submission.route.ts` files, registered as Fastify plugins. The `SubmissionController` now calls `submissionRepository.updateStatus(SubmissionStatus.QUEUED)` after `enqueueSubmissionJob`. `BullMQ` `submissionQueue` configured with exponential backoff for retries.",
+      "backendModulesAffected": [
+        "apps/api",
+        "packages/application",
+        "packages/database",
+        "packages/queue",
+        "packages/state-machine",
+        "packages/types",
+        "packages/error_handling"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "development docs/CHANGELOG.md",
+        "development docs/API Reference.md",
+        "development docs/Submission Lifecycle.md",
+        "development docs/Reliability and Recovery.md"
+      ],
+      "apiChanges": [
+        "**POST /submit**: Requires `userId`, `problemId`, `language`, and `code` in the request body, validated by `submissionSchema`.",
+        "**GET /submissions**: Returns all submissions.",
+        "New Zod schemas `submissionSchema` for input validation.",
+        "New DTOs `SubmitSubmissionDto`.",
+        "API routes refactored into `health.route.ts` and `submission.route.ts`."
+      ],
+      "databaseChanges": [
+        "`SubmissionEntity` expanded to include `userId`, `problemId`, `stderr`, `exitCode`, and use `SubmissionStatus` enum.",
+        "(`CreateSubmissionInput` includes `userId` and `problemId` is mentioned here, but it's not present in the latest `CreateSubmissionInput` definition from commit `cf9ac9602f674e176a478429e4efbbc602f392bc`, where `userId` and `problemId` were added to the `SubmissionInput` of the API. However, the architectural change correctly states `SubmissionRepository` contract was expanded with detailed input, so this can be kept as is representing the overall evolution).",
+        "`SubmissionRepository` now includes `getSubmissionById`.",
+        "`PrismaSubmissionRepository` implements `getSubmissionById`, and its `createSubmission`, `updateStatus`, `completeSubmission` methods now use the `toSubmissionEntity` mapper and perform state transition validation. `PrismaSubmissionRepository` also throws `SubmissionNotFoundError` and `InvalidTransitionError`."
+      ]
+    },
+    {
+      "name": "Problem and Test Case Management",
+      "commits": [
+        "cf9ac9602f674e176a478429e4efbbc602f392bc",
+        "ee7335697f098957a796278b89c1981127eee0a8",
+        "dcf3c88a6b3ba5d407efd2a752849f824a7deeca"
+      ],
+      "summary": "This feature introduced the ability to define and manage coding problems and their associated test cases within the AlgoFight platform. It includes new database models, repository interfaces, and API endpoints for problems.",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "New `Problem` and `TestCase` models were added to the Prisma schema, establishing a one-to-many relationship where a Problem can have multiple Test Cases. `ProblemRepository` and `TestCaseRepository` contracts were defined, along with their Prisma implementations. The `SubmissionController` was updated to validate the existence of a problem before creating a submission. API endpoints were created for problem creation and retrieval. A `ProblemNotFoundError` was introduced in `@algofight/error_handling`.",
+      "backendModulesAffected": [
+        "packages/database",
+        "apps/api",
+        "packages/error_handling"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "development docs/CHANGELOG.md",
+        "development docs/API Reference.md",
+        "development docs/Database Schema.md"
+      ],
+      "apiChanges": [
+        "**POST /problems**: Creates a new problem. Request body requires `title`, `statement`, `difficulty`, `timeLimit`, `memoryLimit`, validated by `problemSchema`.",
+        "**GET /problems/:id**: Retrieves a problem by its ID.",
+        "New DTOs `ProblemInput` for problem creation."
+      ],
+      "databaseChanges": [
+        "New Prisma `Problem` model with fields: `id`, `title`, `statement`, `difficulty` (enum), `timeLimit`, `memoryLimit`, `createdAt`, `updatedAt`.",
+        "New Prisma `TestCase` model with fields: `id`, `problemId` (FK to Problem), `input`, `expectedOutput`, `isHidden`, `createdAt`.",
+        "`Difficulty` enum added to Prisma schema.",
+        "`ProblemEntity` and `TestCaseEntity` interfaces added to `packages/database/src/entities`.",
+        "`ProblemRepository` and `TestCaseRepository` contracts were defined, along with their Prisma implementations.",
+        "`PrismaProblemRepository` implementation added, including `testCases` in queries.",
+        "`Submission` table updated with `problemId` and `userId` foreign keys to `Problem` and (implicitly) `User`."
+      ]
+    },
+    {
+      "name": "Docker-based Code Execution Engine",
+      "commits": [
+        "a9f2ecf1ff5f3d3151b320629ea35e2d2ba3f15b",
+        "524460c3689d7a28556b102f4125e037a410d336",
+        "380ca8245019d674d74ad8f7657f188f807c32c1",
+        "c901ec7c8551aacc4a2c692a0e9ff073bc70c78e",
+        "2dced7e1cfcd39f176ab472216f266f124ceded2",
+        "5e445b8ff86097d5ab9c19b490a4f76969a50798",
+        "c2d8223ea7419d1f4adf2f5799447f8ad585c75c"
+      ],
+      "summary": "This major enhancement replaced the mock code executor with a real Docker-based execution environment. It introduced abstractions for container interaction and language-specific runtime configurations, allowing code to be compiled and run in isolated, resource-constrained Docker containers.",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "A new `ContainerExecutor` interface and its `ContainerRunner` implementation were introduced in `packages/application/src/docker`, leveraging `dockerode` to manage Docker container lifecycles. `ContainerConfig` and `ContainerResult` types were defined for structured container interaction. The `DockerExecutor` was implemented to fulfill the `CodeExecutor` contract, orchestrating workspace setup, container execution, and cleanup. A `LanguageRuntime` abstraction (with `JavaScriptRuntime` as the first concrete implementation) allows for language-specific container image and command configurations, managed by `RuntimeFactory`. `EXECUTION_LIMITS` constants were added to enforce resource constraints (memory, CPU) on containers. `ExecutionResultProcessor` was created to transform raw container output into a standardized `SubmissionResult`. The Worker application was updated to use `DockerExecutor` for actual code execution. Workspace cleanup was also implemented for DockerExecutor.",
+      "backendModulesAffected": [
+        "packages/application",
+        "apps/worker",
+        "packages/database",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "development docs/CHANGELOG.md",
+        "development docs/Worker Internal Architecture.md",
+        "development docs/Security and Sandbox.md"
+      ],
+      "apiChanges": [],
+      "databaseChanges": []
+    },
+    {
+      "name": "Recovery and Stale Submission Handling",
+      "commits": [
+        "524460c3689d7a28556b102f4125e037a410d336",
+        "2dced7e1cfcd39f176ab472216f266f124ceded2",
+        "5e445b8ff86097d5ab9c19b490a4f76969a50798"
+      ],
+      "summary": "This feature introduced a robust recovery mechanism to detect and handle stale or failed submissions. It includes a dedicated scheduler application, defines retry policies, and updates submission statuses to ensure eventual processing or proper failure marking.",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "A new `apps/scheduler` application was introduced, configured to run `stale-submission.job` periodically. The `RecoveryService` was implemented to identify submissions stuck in a `PROCESSING` state for too long (stale submissions) and manage their recovery. `RECOVERY_POLICY` and `RETRY_POLICY` constants were defined to control stale thresholds and maximum retry attempts. The `PrismaSubmissionRepository` was extended with `getStaleSubmissions`, `markAsStale`, `incrementRetryCount`, and `findById` methods. The `recoverSubmission` logic in `RecoveryService` now checks retry counts, transitions submissions to `RETRYING` then `QUEUED`, and re-enqueues them, or marks them as `FAILED` if retry limits are exceeded. BullMQ queues were updated to include an exponential backoff policy for retries. Graceful shutdown was added to the scheduler.",
+      "backendModulesAffected": [
+        "apps/scheduler",
+        "packages/application",
+        "packages/database",
+        "packages/queue",
+        "packages/logger",
+        "packages/types"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "development docs/CHANGELOG.md",
+        "development docs/Reliability and Recovery.md",
+        "development docs/Scheduler Application.md"
+      ],
+      "apiChanges": [
+        "New DTOs `RetrySubmissionDto` and `RecoveryJobDto` for potential future recovery API endpoints."
+      ],
+      "databaseChanges": [
+        "`SubmissionRepository` now includes `getStaleSubmissions`.",
+        "`PrismaSubmissionRepository` implements `getStaleSubmissions`, `incrementRetryCount`, `markAsStale`, and `findById`."
+      ]
+    },
+    {
+      "name": "Event-Driven Architecture Core",
+      "commits": [
+        "7e093936324addd7f9e985bf07a9e34a5ced586d",
+        "cf9ac9602f674e176a478429e4efbbc602f392bc"
+      ],
+      "summary": "This feature laid the groundwork for an event-driven architecture, introducing an event bus and basic contracts for domain events and event handlers. It enables decoupled communication and extensibility across backend services.",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "A new `@algofight/events` package was created, defining the `EventBus` for publishing and subscribing to events. Core interfaces `DomainEvent` and `EventHandler` were established. Several domain event classes (`SubmissionCreatedEvent`, `ExecutionStartedEvent`, `ExecutionCompletedEvent`, `SubmissionFailedEvent`, `SubmissionQueuedEvent`) were defined to represent key occurrences in the submission lifecycle. Basic handlers (`LoggingHandler`, `MetricsHandler`, `AuditHandler`) were added to demonstrate event consumption. Event registration allows subscribing multiple handlers to specific events.",
+      "backendModulesAffected": [
+        "packages/events",
+        "apps/api"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "development docs/CHANGELOG.md",
+        "development docs/Event-Driven Architecture.md"
+      ],
+      "apiChanges": [],
+      "databaseChanges": []
+    },
+    {
+      "name": "Advanced Judging System",
+      "commits": [
+        "dcf3c88a6b3ba5d407efd2a752849f824a7deeca",
+        "e861a666e2e947a8b71bae2a7c47d1d6b82ee9cd",
+        "0a145e9e0c8f9c966794e5afbb8135e92ebb7710"
+      ],
+      "summary": "The judging system was developed to evaluate code submissions against multiple test cases, determine a comprehensive verdict, and provide detailed results including pass/fail counts and specific error conditions (time/memory limits, compilation/runtime errors).",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "The `packages/application/src/judge` module was significantly expanded. It introduced `Comparator` and `ExactComparator` for output comparison. The `Verdict` enum was refined with comprehensive outcome types, and a `VerdictEngine` was developed using a `VerdictRule` registry for priority-based verdict determination. New data models `JudgeInput`, `JudgeRequest`, `JudgeResult`, and `TestcaseResult` were defined to structure judging data. The `JudgeService` was enhanced to process multiple `JudgeInput`s, determining individual test case verdicts and aggregating them into a final `JudgeResult` with summary statistics (`passedCount`, `failedCount`). A `JudgeResultProcessor` was added as a high-level entry point for the judging logic.",
+      "backendModulesAffected": [
+        "packages/application",
+        "packages/database"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "development docs/CHANGELOG.md",
+        "development docs/Judging System.md"
+      ],
+      "apiChanges": [],
+      "databaseChanges": []
+    },
+    {
+      "name": "Modular State Machine",
+      "commits": [
+        "0a145e9e0c8f9c966794e5afbb8135e92ebb7710"
+      ],
+      "summary": "The submission state machine was refactored for modularity and extensibility, providing a more robust way to manage and enforce transitions between different submission statuses.",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "The `@algofight/state-machine` package was refactored to introduce a generic `StateMachine` interface. A `SubmissionStateMachine` implementation was created, encapsulating the logic for `SubmissionStatus` transitions, `canTransition`, `transition`, and `getAvailableTransitions`. The `transitions` mapping was moved to a dedicated `submission-transition.ts` file, making it more explicit and easier to manage. `InvalidTransitionError` was integrated directly into the `SubmissionStateMachine` to enforce valid state changes.",
+      "backendModulesAffected": [
+        "packages/state-machine",
+        "packages/database"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "development docs/CHANGELOG.md",
+        "development docs/Submission Lifecycle.md",
+        "development docs/State Machine.0md"
+      ],
+      "apiChanges": [],
+      "databaseChanges": []
+    },
+    {
+      "name": "API Validator Abstraction",
+      "commits": [
+        "cf9ac9602f674e176a478429e4efbbc602f392bc",
+        "e861a666e2e947a8b71bae2a7c47d1d6b82ee9cd"
+      ],
+      "summary": "This feature introduced a reusable validation framework for API requests, making it easier to define and apply validation rules using Zod schemas for various DTOs.",
+      "implemented": true,
+      "planned": false,
+      "architecturalChanges": "An abstract `Validator<T>` class was introduced in `apps/api/src/validators`, providing a generic `validate` method using Zod schemas. This centralizes validation logic and promotes reuse. New Zod schemas were added for `RecoveryJobDto`, `RetrySubmissionDto`, `WorkerRegistrationDto`, `WorkerHeartbeatDto`, and `WorkerExecutionDto`, standardizing input validation for these API contexts. A `validateRequest` utility was introduced for common validation patterns.",
+      "backendModulesAffected": [
+        "apps/api"
+      ],
+      "documentationPagesThatMustBeUpdated": [
+        "development docs/CHANGELOG.md",
+        "development docs/API Reference.md",
+        "development docs/Validation.md"
+      ],
+      "apiChanges": [
+        "New DTOs introduced for Worker and Recovery related APIs (though not yet exposed as routes in these commits, the validation schemas are ready)."
+      ],
+      "databaseChanges": []
+    }
+  ]
+}

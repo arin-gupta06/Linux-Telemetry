@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlgoFight - Linux Telemetry & Evaluation Service</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="dark-theme">
+    <!-- Background Glow Elements -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <div class="app-container">
+        <!-- Top Navigation / Header -->
+        <header class="navbar glass-card">
+            <div class="brand-section">
+                <div class="brand-badge">
+                    <span class="pulse-dot"></span>
+                    <span class="brand-title">ALGOFIGHT</span>
+                    <span class="brand-sub">LINUX TELEMETRY</span>
+                </div>
+                <div class="status-indicator">
+                    <span class="live-pill" id="sse-status-pill">
+                        <span class="live-beacon"></span> LIVE SSE STREAM
+                    </span>
+                    <span class="env-pill">STANDALONE LINUX</span>
+                </div>
+            </div>
+
+            <div class="quick-vitals-bar">
+                <div class="vital-item" title="Host CPU Utilization">
+                    <span class="vital-label">CPU</span>
+                    <span class="vital-value" id="header-cpu">0.0%</span>
+                    <div class="mini-bar-bg"><div class="mini-bar-fill" id="header-cpu-bar" style="width: 0%"></div></div>
+                </div>
+                <div class="vital-item" title="Host Memory Usage">
+                    <span class="vital-label">RAM</span>
+                    <span class="vital-value" id="header-ram">0.0%</span>
+                    <div class="mini-bar-bg"><div class="mini-bar-fill fill-accent" id="header-ram-bar" style="width: 0%"></div></div>
+                </div>
+                <div class="vital-item" title="Current Throughput">
+                    <span class="vital-label">THROUGHPUT</span>
+                    <span class="vital-value text-glow" id="header-throughput">0.0 RPS</span>
+                </div>
+                <div class="vital-item" title="Active Auto-Scaling Workers">
+                    <span class="vital-label">WORKERS</span>
+                    <span class="vital-value" id="header-workers">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tab-navigation">
+            <button class="nav-tab active" data-tab="tab-overview">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                Overview & Vitals
+            </button>
+            <button class="nav-tab" data-tab="tab-logs">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17h16M4 12h16M4 7h16"/></svg>
+                Pino Structured Logs <span class="badge-count" id="badge-logs-count">0</span>
+            </button>
+            <button class="nav-tab" data-tab="tab-battles">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                1v1 Battle Telemetry
+            </button>
+            <button class="nav-tab" data-tab="tab-stress">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Stress & Load Engine <span class="badge-status" id="stress-nav-badge">IDLE</span>
+            </button>
+            <button class="nav-tab" data-tab="tab-cache">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                Cache & Store Explorer
+            </button>
+            <button class="nav-tab" data-tab="tab-simulator">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Event & Log Injector
+            </button>
+        </nav>
+
+        <!-- Tab 1: Overview & Vitals -->
+        <main class="tab-content active" id="tab-overview">
+            <div class="metrics-grid">
+                <div class="metric-card glass-card">
+                    <div class="card-header">
+                        <span class="card-title">CPU Utilization (Linux Host)</span>
+                        <span class="card-tag" id="cpu-load-tag">Load: 0.0, 0.0, 0.0</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chart-cpu" width="480" height="180"></canvas>
+                    </div>
+                    <div class="card-footer">
+                        <span class="footer-metric">Current: <strong id="cpu-curr">0.0%</strong></span>
+                        <span class="footer-metric">Per Core: <span id="per-cpu-info">--</span></span>
+                    </div>
+                </div>
+
+                <div class="metric-card glass-card">
+                    <div class="card-header">
+                        <span class="card-title">RAM & Memory Distribution</span>
+                        <span class="card-tag" id="ram-used-tag">0 MB / 0 MB</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chart-ram" width="480" height="180"></canvas>
+                    </div>
+                    <div class="card-footer">
+                        <span class="footer-metric">Memory Usage: <strong id="ram-curr">0.0%</strong></span>
+                        <span class="footer-metric">Available: <span id="ram-free">--</span></span>
+                    </div>
+                </div>
+
+                <div class="metric-card glass-card">
+                    <div class="card-header">
+                        <span class="card-title">Throughput (Operations / Sec)</span>
+                        <span class="card-tag">Real-Time RPS</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chart-throughput" width="480" height="180"></canvas>
+                    </div>
+                    <div class="card-footer">
+                        <span class="footer-metric">Peak RPS: <strong id="peak-rps">0.0</strong></span>
+                        <span class="footer-metric">Active Workers: <strong id="workers-count">0</strong></span>
+                    </div>
+                </div>
+
+                <div class="metric-card glass-card">
+                    <div class="card-header">
+                        <span class="card-title">Queues & Backpressure</span>
+                        <span class="card-tag">IPC Priority Queues</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chart-queues" width="480" height="180"></canvas>
+                    </div>
+                    <div class="card-footer">
+                        <span class="footer-metric">Light Queue: <strong id="light-q-depth">0</strong></span>
+                        <span class="footer-metric">Heavy Queue: <strong id="heavy-q-depth">0</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Architecture Reference Banner -->
+            <div class="service-banner glass-card">
+                <div class="banner-diagram">
+                    <div class="diagram-node node-app">
+                        <div class="node-title">Main Application</div>
+                        <div class="node-subtitle">BullMQ • Worker • API</div>
+                    </div>
+                    <div class="diagram-arrow">
+                        <span class="arrow-label">HTTP Telemetry & Pino Logs</span>
+                        <span class="arrow-line">──▶</span>
+                    </div>
+                    <div class="diagram-node node-server active-pulse">
+                        <div class="node-title">Linux Evaluation Service</div>
+                        <div class="node-subtitle">Telemetry • Stress • Cache • Stats UI</div>
+                    </div>
+                    <div class="diagram-arrow">
+                        <span class="arrow-label">Query / Prometheus / SSE</span>
+                        <span class="arrow-line">──▶</span>
+                    </div>
+                    <div class="diagram-node node-ui">
+                        <div class="node-title">Statistics UI</div>
+                        <div class="node-subtitle">Live Visualizer & Monitor</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Tab 2: Pino Structured Logs -->
+        <section class="tab-content" id="tab-logs">
+            <div class="logs-panel glass-card">
+                <div class="logs-toolbar">
+                    <div class="search-box">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        <input type="text" id="log-search-input" placeholder="Search log message, submissionId, battleId, userId...">
+                    </div>
+                    <div class="level-filters">
+                        <button class="pill-filter active" data-level="all">ALL</button>
+                        <button class="pill-filter" data-level="30">INFO</button>
+                        <button class="pill-filter" data-level="40">WARN</button>
+                        <button class="pill-filter" data-level="50">ERROR</button>
+                        <button class="pill-filter" data-level="20">DEBUG</button>
+                        <button class="pill-filter" data-level="10">TRACE</button>
+                    </div>
+                    <div class="logs-actions">
+                        <button class="btn-sm btn-outline" id="btn-refresh-logs">Refresh</button>
+                        <button class="btn-sm btn-outline" id="btn-clear-terminal">Clear View</button>
+                        <label class="toggle-label"><input type="checkbox" id="chk-autoscroll" checked> Auto-scroll</label>
+                    </div>
+                </div>
+
+                <div class="log-terminal-container" id="log-terminal">
+                    <!-- Dynamic log items will be inserted here -->
+                    <div class="terminal-empty">Waiting for Pino structured logs from Main Application...</div>
+                </div>
+
+                <div class="log-detail-modal glass-card" id="log-modal" style="display: none;">
+                    <div class="modal-header">
+                        <span class="modal-title">Pino Structured Log Inspector</span>
+                        <button class="btn-close" id="btn-close-modal">✕</button>
+                    </div>
+                    <pre class="json-viewer" id="log-json-content"></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 3: 1v1 Battle Telemetry -->
+        <section class="tab-content" id="tab-battles">
+            <div class="battles-panel">
+                <div class="panel-header glass-card">
+                    <div>
+                        <h2 class="section-heading">1v1 Real-Time Battle Telemetry</h2>
+                        <p class="section-desc">Head-to-head execution time, CPU profile, peak memory RSS, and verdict comparisons.</p>
+                    </div>
+                    <button class="btn-sm btn-primary" id="btn-refresh-battles">Refresh Battles</button>
+                </div>
+
+                <div class="battles-grid" id="battles-container">
+                    <!-- Dynamic Battle Cards -->
+                    <div class="terminal-empty glass-card">No battles ingested yet. Send a 1v1 battle telemetry payload or run the injector.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 4: Stress & Load Engine -->
+        <section class="tab-content" id="tab-stress">
+            <div class="stress-panel">
+                <div class="stress-control-card glass-card">
+                    <div class="card-header">
+                        <h2 class="section-heading">Load & Stress Test Lab</h2>
+                        <span class="status-badge" id="stress-card-status">IDLE</span>
+                    </div>
+
+                    <div class="control-grid">
+                        <div class="control-group">
+                            <label for="stress-jobs">Total Jobs: <strong id="val-jobs">4,000</strong></label>
+                            <input type="range" id="stress-jobs" min="100" max="10000" step="100" value="4000">
+                        </div>
+
+                        <div class="control-group">
+                            <label for="stress-users">Simulated Users: <strong id="val-users">250</strong></label>
+                            <input type="range" id="stress-users" min="10" max="1000" step="10" value="250">
+                        </div>
+
+                        <div class="control-group">
+                            <label for="stress-heavy">Heavy Workload Ratio: <strong id="val-heavy">15%</strong></label>
+                            <input type="range" id="stress-heavy" min="0" max="50" step="5" value="15">
+                        </div>
+
+                        <div class="control-group">
+                            <label for="stress-fail">Simulated Failure Rate: <strong id="val-fail">0%</strong></label>
+                            <input type="range" id="stress-fail" min="0" max="10" step="1" value="0">
+                        </div>
+                    </div>
+
+                    <div class="stress-buttons">
+                        <button class="btn-lg btn-success" id="btn-start-stress">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Launch Stress Benchmark
+                        </button>
+                        <button class="btn-lg btn-danger" id="btn-stop-stress" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                            Stop Benchmark
+                        </button>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-section">
+                        <div class="progress-labels">
+                            <span>Execution Progress</span>
+                            <span id="stress-progress-text">0.0% (0 / 0)</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" id="stress-progress-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stress Results & Percentiles -->
+                <div class="stress-metrics-grid">
+                    <div class="metric-card glass-card">
+                        <div class="card-header">
+                            <span class="card-title">Latency Percentiles (p50 / p90 / p95 / p99)</span>
+                            <span class="card-tag">End-to-End Latency</span>
+                        </div>
+                        <div class="percentile-boxes">
+                            <div class="p-box"><span class="p-label">Avg</span><span class="p-val" id="p-avg">0.00s</span></div>
+                            <div class="p-box"><span class="p-label">P50</span><span class="p-val" id="p-p50">0.00s</span></div>
+                            <div class="p-box"><span class="p-label">P90</span><span class="p-val" id="p-p90">0.00s</span></div>
+                            <div class="p-box"><span class="p-label">P95</span><span class="p-val text-warning" id="p-p95">0.00s</span></div>
+                            <div class="p-box"><span class="p-label">P99</span><span class="p-val text-danger" id="p-p99">0.00s</span></div>
+                            <div class="p-box"><span class="p-label">Max</span><span class="p-val" id="p-max">0.00s</span></div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card glass-card">
+                        <div class="card-header">
+                            <span class="card-title">Live Stress Stats</span>
+                            <span class="card-tag" id="stress-time-tag">Elapsed: 0.0s</span>
+                        </div>
+                        <div class="stats-summary-list">
+                            <div class="summary-row"><span>Throughput</span><strong id="stress-rps">0.0 RPS</strong></div>
+                            <div class="summary-row"><span>Successful Executions</span><strong class="text-success" id="stress-success">0</strong></div>
+                            <div class="summary-row"><span>Failed / Retried</span><strong class="text-danger" id="stress-failed">0 / 0</strong></div>
+                            <div class="summary-row"><span>Active Auto-scaled Workers</span><strong id="stress-workers">0</strong></div>
+                            <div class="summary-row"><span>Fairness (Active Users)</span><strong id="stress-fairness">0 users</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 5: Cache Explorer -->
+        <section class="tab-content" id="tab-cache">
+            <div class="cache-panel glass-card">
+                <div class="panel-header">
+                    <div>
+                        <h2 class="section-heading">Multi-Tier Telemetry Cache</h2>
+                        <p class="section-desc">Inspect in-memory ring buffers, raw time-series points, stored execution traces, and stress benchmarks.</p>
+                    </div>
+                    <button class="btn-sm btn-primary" id="btn-refresh-cache">Refresh Cache Stats</button>
+                </div>
+
+                <div class="cache-stats-grid" id="cache-stats-boxes">
+                    <div class="cache-box">
+                        <span class="cache-box-label">Raw Telemetry Points</span>
+                        <span class="cache-box-value" id="c-raw-count">0</span>
+                    </div>
+                    <div class="cache-box">
+                        <span class="cache-box-label">Stored Pino Logs</span>
+                        <span class="cache-box-value" id="c-log-count">0</span>
+                    </div>
+                    <div class="cache-box">
+                        <span class="cache-box-label">Battle Records</span>
+                        <span class="cache-box-value" id="c-battle-count">0</span>
+                    </div>
+                    <div class="cache-box">
+                        <span class="cache-box-label">Execution Traces</span>
+                        <span class="cache-box-value" id="c-exec-count">0</span>
+                    </div>
+                    <div class="cache-box">
+                        <span class="cache-box-label">Stress Reports</span>
+                        <span class="cache-box-value" id="c-stress-count">0</span>
+                    </div>
+                </div>
+
+                <div class="cache-preview-section">
+                    <h3 class="subsection-title">Latest Raw Telemetry Samples (JSON)</h3>
+                    <pre class="json-viewer" id="cache-raw-json">Loading...</pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 6: Injector Simulator -->
+        <section class="tab-content" id="tab-simulator">
+            <div class="simulator-panel glass-card">
+                <div class="panel-header">
+                    <div>
+                        <h2 class="section-heading">Telemetry & Pino Log Injector</h2>
+                        <p class="section-desc">Simulate live HTTP events from the Main Application to verify ingestion pipelines, metric extraction, and live charts.</p>
+                    </div>
+                </div>
+
+                <div class="simulator-actions">
+                    <button class="btn-md btn-primary" id="btn-inject-pino-info">Inject Info Log</button>
+                    <button class="btn-md btn-warning" id="btn-inject-pino-warn">Inject Warning Log</button>
+                    <button class="btn-md btn-danger" id="btn-inject-pino-err">Inject Error Log</button>
+                    <button class="btn-md btn-success" id="btn-inject-execution">Inject Submission Execution</button>
+                    <button class="btn-md btn-purple" id="btn-inject-battle">Inject 1v1 Battle Match</button>
+                </div>
+
+                <div class="custom-inject-form">
+                    <h3 class="subsection-title">Custom Pino JSON Ingest Payload:</h3>
+                    <textarea id="custom-json-input" class="code-textarea" rows="6" placeholder='{"level": 30, "msg": "submission.completed", "submissionId": "sub-101", "executionTimeMs": 45.2, "cpuTimeMs": 42.1, "peakMemoryKb": 16420, "verdict": "ACCEPTED"}'></textarea>
+                    <button class="btn-md btn-primary" id="btn-send-custom-json">Send to /api/v1/telemetry/logs</button>
+                    <div id="inject-result-alert" class="alert-box" style="display: none;"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
