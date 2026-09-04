@@ -11,6 +11,8 @@ from app.telemetry.engine import get_telemetry_engine
 from app.telemetry.models import (
     BattleIngestPayload,
     ExecutionIngestPayload,
+    RuntimePoolTelemetryPayload,
+    QueueTelemetryPayload,
 )
 
 router = APIRouter(prefix="/telemetry", tags=["Telemetry & Logs"])
@@ -119,3 +121,17 @@ def get_telemetry_summary():
     """Get high-level summary of cached telemetry, logs, and battles."""
     cache = get_cache_service()
     return cache.get_overall_stats()
+
+
+@router.post("/runtime-pool")
+def ingest_runtime_pool_telemetry(payload: RuntimePoolTelemetryPayload):
+    """Ingest real-time multi-runtime container fleet & autoscaling status."""
+    engine = get_telemetry_engine()
+    return engine.ingest_runtime_pool(payload)
+
+
+@router.post("/queues")
+def ingest_queue_telemetry(payload: QueueTelemetryPayload):
+    """Ingest real-time segregated Light/Heavy queue depths and worker loads."""
+    engine = get_telemetry_engine()
+    return engine.ingest_queue_vitals(payload)

@@ -29,6 +29,8 @@ from app.telemetry.models import (
     BattleIngestPayload,
     ExecutionIngestPayload,
     SystemVitals,
+    RuntimePoolTelemetryPayload,
+    QueueTelemetryPayload,
 )
 from app.telemetry.pino_parser import PinoParser
 
@@ -43,6 +45,21 @@ class TelemetryEngine:
 
     def __init__(self, cache_service: Optional[CacheService] = None):
         self.cache = cache_service or get_cache_service()
+        self.latest_runtime_pool = {
+            "active_runtimes_count": 2,
+            "runtimes": [
+                {"url": "http://localhost:2001", "port": 2001, "status": "HEALTHY", "active_jobs": 0},
+                {"url": "http://localhost:2002", "port": 2002, "status": "HEALTHY", "active_jobs": 0},
+            ],
+            "scaling_state": "STABLE",
+            "cooldown_seconds_remaining": 0.0,
+        }
+        self.latest_queue_vitals = {
+            "light_depth": 0,
+            "heavy_depth": 0,
+            "light_workers": 0,
+            "heavy_workers": 0,
+        }
         self._running = True
         self._sampler_thread = threading.Thread(target=self._periodic_sampler, daemon=True)
         self._sampler_thread.start()
@@ -144,11 +161,42 @@ class TelemetryEngine:
         battles_counter.inc()
         return entry
 
+    def ingest_runtime_pool(self, payload: RuntimePoolTelemetryPayload) -> Dict[str, Any]:
+        self.latest_runtime_pool = {
+            "active_runtimes_count": payload.active_runtimes_count,
+            "runtimes": payload.runtimes or [
+                {"url": "http://localhost:2001", "port": 2001, "status": "HEALTHY", "active_jobs": 0},
+                {"url": "http://localhost:2002", "port": 2002, "status": "HEALTHY", "active_jobs": 0}
+            ],
+            "scaling_state": payload.scaling_state,
+            "cooldown_seconds_remaining": payload.cooldown_seconds_remaining,
+        }
+        if payload.light_queue_depth or payload.heavy_queue_depth:
+            self.latest_queue_vitals["light_depth"] = payload.light_queue_depth
+            self.latest_queue_vitals["heavy_depth"] = payload.heavy_queue_depth
+        if payload.light_workers_busy or payload.heavy_workers_busy:
+            self.latest_queue_vitals["light_workers"] = payload.light_workers_busy
+            self.latest_queue_vitals["heavy_workers"] = payload.heavy_workers_busy
+        return {"status": "ok", "active_runtimes": payload.active_runtimes_count}
+
+    def ingest_queue_vitals(self, payload: QueueTelemetryPayload) -> Dict[str, Any]:
+        self.latest_queue_vitals["light_depth"] = payload.light_queue_depth
+        self.latest_queue_vitals["heavy_depth"] = payload.heavy_queue_depth
+        self.latest_queue_vitals["light_workers"] = payload.light_workers_busy
+        self.latest_queue_vitals["heavy_workers"] = payload.heavy_workers_busy
+        return {"status": "ok"}
+
     def get_system_vitals(self) -> SystemVitals:
         raw_summary = self.cache.raw_store.get_summary()
         battle_summary = self.cache.battle_store.get_summary()
+        total_workers = (
+            self.latest_queue_vitals["light_workers"] + self.latest_queue_vitals["heavy_workers"]
+            or raw_summary.get("current_workers", 0)
+        )
         return SystemCollector.get_vitals(
-            active_workers=raw_summary.get("current_workers", 0),
+            active_workers=total_workers,
+            light_depth=self.latest_queue_vitals["light_depth"],
+            heavy_depth=self.latest_queue_vitals["heavy_depth"],
             throughput_rps=raw_summary.get("current_throughput", 0.0),
             active_battles=battle_summary.get("active_battles", 0),
         )

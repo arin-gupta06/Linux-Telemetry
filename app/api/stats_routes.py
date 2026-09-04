@@ -52,6 +52,7 @@ async def live_telemetry_sse():
                 payload = {
                     "timestamp": time.time(),
                     "vitals": vitals.model_dump(),
+                    "runtime_pool": getattr(engine, "latest_runtime_pool", {}),
                     "raw_series": [r.model_dump() for r in recent_raw],
                     "logs": [l.model_dump() for l in recent_logs],
                     "battles": [b.model_dump() for b in recent_battles],

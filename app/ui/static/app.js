@@ -551,6 +551,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("workers-count").innerText = vitals.active_workers || 0;
                 document.getElementById("light-q-depth").innerText = vitals.light_queue_depth || 0;
                 document.getElementById("heavy-q-depth").innerText = vitals.heavy_queue_depth || 0;
+                // Update Runtime Pool Cluster UI
+                if (data.runtime_pool) {
+                    updateRuntimePoolUI(data.runtime_pool);
+                }
+
 
                 if (vitals.load_avg) {
                     document.getElementById("cpu-load-tag").innerText = `Load: ${vitals.load_avg.map(x => x.toFixed(2)).join(", ")}`;
@@ -617,3 +622,51 @@ document.addEventListener("DOMContentLoaded", () => {
 
     connectSSE();
 });
+
+
+function updateRuntimePoolUI(pool) {
+    const countEl = document.getElementById("active-runtimes-count");
+    if (countEl) countEl.innerText = pool.active_runtimes_count || 2;
+
+    const cooldownEl = document.getElementById("cooldown-timer");
+    if (cooldownEl) {
+        cooldownEl.innerText = (pool.cooldown_seconds_remaining ? Math.floor(pool.cooldown_seconds_remaining) : 60) + "s";
+    }
+
+    const badgeEl = document.getElementById("scaling-state-badge");
+    if (badgeEl && pool.scaling_state) {
+        badgeEl.innerText = pool.scaling_state;
+        if (pool.scaling_state === "SCALING_OUT") {
+            badgeEl.style.color = "#f59e0b";
+            badgeEl.style.background = "rgba(245, 158, 11, 0.15)";
+            badgeEl.style.borderColor = "rgba(245, 158, 11, 0.3)";
+        } else if (pool.scaling_state === "COOLDOWN_DRAIN") {
+            badgeEl.style.color = "#3b82f6";
+            badgeEl.style.background = "rgba(59, 130, 246, 0.15)";
+            badgeEl.style.borderColor = "rgba(59, 130, 246, 0.3)";
+        } else {
+            badgeEl.style.color = "#10b981";
+            badgeEl.style.background = "rgba(16, 185, 129, 0.15)";
+            badgeEl.style.borderColor = "rgba(16, 185, 129, 0.3)";
+        }
+    }
+
+    const gridEl = document.getElementById("runtime-pool-grid");
+    if (gridEl && Array.isArray(pool.runtimes) && pool.runtimes.length > 0) {
+        gridEl.innerHTML = pool.runtimes.map((r, i) => {
+            const isBaseline = r.port === 2001 || r.port === 2002;
+            const role = isBaseline ? (r.port === 2001 ? "Baseline (Compiler)" : "Baseline (Scripts)") : "Dynamic Elastic";
+            const statusColor = r.status === "DRAINING" ? "#f59e0b" : "#10b981";
+            return `
+                <div class="runtime-instance-box" style="padding: 10px 14px; border-radius: 8px; background: rgba(31, 41, 55, 0.6); border: 1px solid rgba(75, 85, 99, 0.4);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <strong style="color: #e5e7eb; font-size: 0.85rem;">Piston-${i + 1} (:${r.port})</strong>
+                        <span style="color: ${statusColor}; font-size: 0.75rem; font-weight: 600;">${r.status || 'HEALTHY'}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #9ca3af;">Role: ${role}</div>
+                    <div style="font-size: 0.75rem; color: #a78bfa; margin-top: 4px;">In-flight Jobs: ${r.active_jobs || 0}</div>
+                </div>
+            `;
+        }).join("");
+    }
+}

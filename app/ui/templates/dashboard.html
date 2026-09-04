@@ -143,6 +143,40 @@
             </div>
 
             <!-- System Architecture Reference Banner -->
+            
+            <!-- Dynamic Runtime Pool Cluster Status -->
+            <div class="glass-card" id="runtime-pool-card" style="margin-bottom: 24px; padding: 18px 24px; border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 12px; background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.1rem; font-weight: 700; color: #a78bfa; letter-spacing: 0.5px;">⚡ ELASTIC RUNTIME POOL (PISTON FLEET)</span>
+                        <span id="scaling-state-badge" style="padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">STABLE</span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #9ca3af;">
+                        Active Containers: <strong id="active-runtimes-count" style="color: #60a5fa;">2</strong> / 4 Max
+                        <span style="margin: 0 8px;">•</span>
+                        Cooldown: <strong id="cooldown-timer" style="color: #f59e0b;">60s</strong>
+                    </div>
+                </div>
+                <div id="runtime-pool-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+                    <div class="runtime-instance-box" style="padding: 10px 14px; border-radius: 8px; background: rgba(31, 41, 55, 0.6); border: 1px solid rgba(75, 85, 99, 0.4);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong style="color: #e5e7eb; font-size: 0.85rem;">Piston-1 (Port 2001)</strong>
+                            <span style="color: #10b981; font-size: 0.75rem;">HEALTHY</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #9ca3af;">Role: Baseline (High-spec compiler)</div>
+                        <div style="font-size: 0.75rem; color: #a78bfa; margin-top: 4px;">In-flight Jobs: 0</div>
+                    </div>
+                    <div class="runtime-instance-box" style="padding: 10px 14px; border-radius: 8px; background: rgba(31, 41, 55, 0.6); border: 1px solid rgba(75, 85, 99, 0.4);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong style="color: #e5e7eb; font-size: 0.85rem;">Piston-2 (Port 2002)</strong>
+                            <span style="color: #10b981; font-size: 0.75rem;">HEALTHY</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #9ca3af;">Role: Baseline (Lightweight scripts)</div>
+                        <div style="font-size: 0.75rem; color: #a78bfa; margin-top: 4px;">In-flight Jobs: 0</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="service-banner glass-card">
                 <div class="banner-diagram">
                     <div class="diagram-node node-app">

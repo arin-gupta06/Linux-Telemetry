@@ -61,3 +61,23 @@ class SystemVitals(BaseModel):
     throughput_rps: float = 0.0
     active_battles: int = 0
     uptime_seconds: float = 0.0
+
+
+class RuntimePoolTelemetryPayload(BaseModel):
+    active_runtimes_count: int = 2
+    runtimes: List[Dict[str, Any]] = Field(default_factory=list)
+    scaling_state: str = "STABLE"
+    cooldown_seconds_remaining: float = 0.0
+    light_queue_depth: int = 0
+    heavy_queue_depth: int = 0
+    light_workers_busy: int = 0
+    heavy_workers_busy: int = 0
+    timestamp: Optional[float] = None
+
+
+class QueueTelemetryPayload(BaseModel):
+    light_queue_depth: int = 0
+    heavy_queue_depth: int = 0
+    light_workers_busy: int = 0
+    heavy_workers_busy: int = 0
+    timestamp: Optional[float] = None
